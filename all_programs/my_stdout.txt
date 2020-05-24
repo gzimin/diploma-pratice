@@ -1,0 +1,3 @@
+Launchnode is mpi-m12
+files = /home/panferov/Fen_2020_Zim/task_q.txt /home/panferov/Fen_2020_Zim/task_globe.txt /home/panferov/Fen_2020_Zim/q_tree.txt
+Добавлено новых точек = 2080

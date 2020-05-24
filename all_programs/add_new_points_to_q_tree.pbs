@@ -1,0 +1,10 @@
+#!/bin/bash
+#PBS -N Fen10
+#PBS -o my_stdout.txt
+#PBS -e my_stderr.txt
+#PBS -l walltime=10:00:00
+#PBS -q workq
+#PBS -l nodes=1:ppn=1
+echo Launchnode is `hostname`
+PROCS=`wc -l < $PBS_NODEFILE`
+mpirun -machinefile $PBS_NODEFILE -np $PROCS $PBS_O_WORKDIR/anptqt $PBS_O_WORKDIR/task_q.txt $PBS_O_WORKDIR/task_globe.txt $PBS_O_WORKDIR/q_tree.txt

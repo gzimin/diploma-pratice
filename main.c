@@ -19,13 +19,13 @@
 *	компоненте импульса отдельно.							*
 *****************************************************************************************/
 
-// Программа берет параметры задачи из файла task_q_easy
+// Программа берет параметры задачи из файла task_q
 // Функция распределения и вспомогательные функции вычисляются для конечного момента времени
 // для списка точек в импульсном пространстве.
-// Список точек берется из файла q_tree_easy
+// Список точек берется из файла q_tree
 // Берутся только точки, для которых установлен признак "не посчитано"
 // Результаты пишутся во временный файл calc_resalt_temp.txt
-// каждой точке соответствует уникальный номер, по которой она затем будет заноситься в task_q_easy
+// каждой точке соответствует уникальный номер, по которой она затем будет заноситься в task_q
 
 
 #include <stdio.h>
@@ -354,12 +354,17 @@ int draw_graphs(struct draw_point* all_points, int len) {
 
     // Отрисовываем трехмерный график в файл 3d_result.png
     char * commandsForGnuplot[] =
-            {"set title \"3D graph of assign points\"",
-             "set term png",
+            {"set title \"График всех поколений\"",
+             "set term png size 1024, 768",
+             "set hidden3d",
+             // Если нужен 2d граффик
+//             "set view map",
+             "set dgrid3d 100,100 qnorm 2",
              "set output \"results/3d_result.png\"",
-             "set palette defined (0 \"green\", 1 \"black\")",
+             "set tics font \"Helvetica,8\"",
+             "set zrange [0:1]",
              "splot 'results/dots_for_draw_sorted' using 1:2:3 with "
-             "points pointtype 7 pointsize 1 lc palette"};
+             "points pointtype 7 pointsize 3 lc palette"};
 
     int num_commands = (sizeof(commandsForGnuplot) / sizeof((commandsForGnuplot)[0]));
 
@@ -407,13 +412,22 @@ int draw_graphs(struct draw_point* all_points, int len) {
         strcat(graph_gen_filename, generation_draw_filename);
         strcat(graph_gen_filename, ".png\"");
 
+
+                // Если нужен 2d граффик
+//             "set view map",
+                //     "set dgrid3d 100,100 qnorm 2",
+
         // Выполняем все команды для отрисовки
         fprintf(gnuplot_pipe_generations, "%s %s %s\n", "set title \"3D chart of", generation_draw_filename, "\"");
-        fprintf(gnuplot_pipe_generations, "%s \n","set term png");
+        fprintf(gnuplot_pipe_generations, "%s \n","set term png size 1024, 768");
+//        fprintf(gnuplot_pipe_generations, "set zrange [-1:1]\n");
+        fprintf(gnuplot_pipe_generations, "set hidden3d\n");
+        fprintf(gnuplot_pipe_generations, "set dgrid3d 100,100 qnorm 2\n");
+        fprintf(gnuplot_pipe_generations, "set tics font \"Helvetica,8\"\n");
+        fprintf(gnuplot_pipe_generations, "set view 72, 63, 1, 1\n");
         fprintf(gnuplot_pipe_generations, "%s \n", graph_gen_filename);
-        fprintf(gnuplot_pipe_generations, "%s \n","set palette defined (0 \"green\", 1 \"black\")");
         fprintf(gnuplot_pipe_generations, "%s%s%s", "splot \'", generation_draw_filename, "\' using 1:2:3 with "
-            "points pointtype 7 pointsize 1 lc palette");
+            "points pointtype 7 pointsize 3 lc palette");
 
         fclose(gnuplot_pipe_generations);
     }
@@ -595,7 +609,7 @@ main (int argc, char **argv) {
     struct draw_point draw_points[line_count];
     // Set threads
 
-    int thread_count = 6;
+    int thread_count = 12;
     omp_set_num_threads(thread_count);
 #pragma omp parallel for
     for (int i = 0; i < line_count; ++i) {
