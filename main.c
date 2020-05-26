@@ -56,17 +56,20 @@ struct params_ {
 /* Дополнительная структура параметров */
 struct point {
     int n_point_t;
-    char *first_child_t;
-    char *parent_t;
+    char first_child_t[17];
+    char parent_t[17];
     int g_number_t;
-    char *point_id_t;
+    char point_id_t[17];
     double p1_t;
     double p2_t;
-    char *calculated_t;
+    char calculated_t[2];
     double f1_t;
     double f2_t;
     double f3_t;
 };
+typedef struct point point;
+
+
 /* Стуктура для точек отрисовки */
 struct draw_point {
     double p1_t;
@@ -76,8 +79,12 @@ struct draw_point {
 };
 
 // Названия файлов для результатов и отрисовки точек.
-char *calc_filename = "results/calc_result";
-char *draw_filename = "results/dots_for_draw";
+char *CALC_FILENAME = "results/calc_result";
+char *DRAW_FILENAME = "results/dots_for_draw";
+char *Q_TREE_FILENAME = "results/q_tree_new";
+
+
+
 
 /*Определяем зависимость компонент электрического поля от времени*/
 double
@@ -229,7 +236,7 @@ jac(double t, const double y[], double *dfdy,
     return GSL_SUCCESS;
 }
 
-int ode_calc(int g_number_t, int n_point_tt, double p1_l, double p2_l, double ePA1, double ePA2, double cP1,
+int ode_calc(struct point* single_data, double ePA1, double ePA2, double cP1,
         double cP2, double sI1, double sI2, double t0p1, double t0p2, double fip1, double fip2, double t_s, double t_e) {
 
     struct params_ calc_params;
@@ -243,8 +250,8 @@ int ode_calc(int g_number_t, int n_point_tt, double p1_l, double p2_l, double eP
     calc_params.t02 = t0p2;
     calc_params.sIgma1 = sI1;
     calc_params.sIgma2 = sI2;
-    calc_params.p1_loc = p1_l;
-    calc_params.p2_loc = p2_l;
+    calc_params.p1_loc = single_data->p1_t;
+    calc_params.p2_loc = single_data->p2_t;
 
     gsl_odeiv2_system sys = {func, jac, 5, &calc_params};
 
@@ -266,32 +273,46 @@ int ode_calc(int g_number_t, int n_point_tt, double p1_l, double p2_l, double eP
 
 
     FILE *calc_result_file;
-
-    if ((calc_result_file = fopen(calc_filename, "a")) == NULL) {
-        fprintf(stderr,"Error opening file '%s'\n", calc_filename);
+    if ((calc_result_file = fopen(CALC_FILENAME, "a")) == NULL) {
+        fprintf(stderr, "Error opening file '%s'\n", CALC_FILENAME);
         return 1;
     }
 
 
-    FILE *draw_points_file = fopen(draw_filename, "a");
+    FILE *draw_points_file = fopen(DRAW_FILENAME, "a");
     if (!draw_points_file) {
-        fprintf(stderr, "Error opening file '%s'\n", draw_filename);
+        fprintf(stderr, "Error opening file '%s'\n", DRAW_FILENAME);
         return 0;
     }
 
+    FILE *q_tree_new_file = fopen(Q_TREE_FILENAME, "a");
+    if(!q_tree_new_file) {
+        fprintf(stderr, "Error opening file '%s'\n", Q_TREE_FILENAME);
+        return 0;
+    }
     // Запись точек для отрисовки в файл
-    fprintf(draw_points_file, "%.10f %.10f %.15e %d\n", p1_l, p2_l, y[0], g_number_t);
+    if (y[0] < 0) {
+        y[0] = pow(10, -16);
+    }
+    fprintf(draw_points_file, "%.10f %.10f %.15e %d\n",
+            single_data->p1_t, single_data->p2_t, y[0], single_data->g_number_t);
     fclose(draw_points_file);
 
     // Запись результатов в файл
-    fprintf(calc_result_file, "%d %.10f %.10f  %.10e %.10e  %.10e\n", n_point_tt, p1_l, p2_l, y[0], y[1], y[2]);
+    fprintf(calc_result_file, "%d %.10f %.10f  %.10e %.10e  %.10e\n",
+            single_data->n_point_t, single_data->p1_t, single_data->p2_t, y[0], y[1], y[2]);
     fclose(calc_result_file);
 
+    // Обновляем главную структуру данных
+
+    single_data->f1_t = y[0];
+    single_data->f2_t = y[1];
+    single_data->f3_t = y[2];
+    fclose(q_tree_new_file);
 
     gsl_odeiv2_driver_free(d);
-
 }
-
+// Компаратор точек для отрисовки графиков
 int md_comparator(const void *v1, const void *v2)
 {
     const struct draw_point *p1 = (struct draw_point *)v1;
@@ -311,13 +332,22 @@ int md_comparator(const void *v1, const void *v2)
     else
         return 0;
 }
+// Компаратор для сортировки точек из файла q_tree
+int md_comparator_all_data(const void *v1, const void *v2)
+{
+    const struct point *p1 = (struct point *)v1;
+    const struct point *p2 = (struct point *)v2;
+    if(p1->n_point_t < p2->n_point_t)
+        return -1;
+    else
+        return +1;
+}
 
 int sort_dots_for_graphs (struct draw_point* all_points, int len) {
 
-
-    FILE *draw_points_file = fopen(draw_filename, "r");
+    FILE *draw_points_file = fopen(DRAW_FILENAME, "r");
     if (!draw_points_file) {
-        fprintf(stderr, "Error opening file '%s'\n", draw_filename);
+        fprintf(stderr, "Error opening file '%s'\n", DRAW_FILENAME);
         return 0;
     }
 
@@ -360,6 +390,7 @@ int draw_graphs(struct draw_point* all_points, int len) {
              // Если нужен 2d граффик
 //             "set view map",
              "set dgrid3d 100,100 qnorm 2",
+//             "set logscale z",
              "set output \"results/3d_result.png\"",
              "set tics font \"Helvetica,8\"",
              "set zrange [0:1]",
@@ -391,7 +422,7 @@ int draw_graphs(struct draw_point* all_points, int len) {
 
         FILE *generation_draw_file = fopen(generation_draw_filename, "w");
         if (!generation_draw_file) {
-            fprintf(stderr, "Error opening file '%s'\n", draw_filename);
+            fprintf(stderr, "Error opening file '%s'\n", DRAW_FILENAME);
             return 0;
         }
 
@@ -418,7 +449,7 @@ int draw_graphs(struct draw_point* all_points, int len) {
                 //     "set dgrid3d 100,100 qnorm 2",
 
         // Выполняем все команды для отрисовки
-        fprintf(gnuplot_pipe_generations, "%s %s %s\n", "set title \"3D chart of", generation_draw_filename, "\"");
+        fprintf(gnuplot_pipe_generations, "%s %d %s\n", "set title \"График поколения - ", i, "\"");
         fprintf(gnuplot_pipe_generations, "%s \n","set term png size 1024, 768");
 //        fprintf(gnuplot_pipe_generations, "set zrange [-1:1]\n");
         fprintf(gnuplot_pipe_generations, "set hidden3d\n");
@@ -431,9 +462,39 @@ int draw_graphs(struct draw_point* all_points, int len) {
 
         fclose(gnuplot_pipe_generations);
     }
-    fclose(gnuplot_pipe);
 }
 
+
+void sorting_and_move_temp_calc_to_q_tree(struct point all_data[], int line_count){
+    int n_point_t;
+    char first_child_t[17];
+    char parent_t[17];
+    int g_number_t;
+    char point_id_t[17];
+    double p1_t;
+    double p2_t;
+    char calculated_t[2];
+    double f1_t;
+    double f2_t;
+    double f3_t;
+
+
+    // Сортируем все данные
+    qsort(all_data, line_count, sizeof(struct point), md_comparator_all_data);
+
+    // Перезаписываем файл
+    FILE *q_tree_new_write = fopen(Q_TREE_FILENAME, "w");
+
+    for(int i =0; i < line_count; ++i){
+        fprintf(q_tree_new_write, "%d %s %s %d %s %lf %lf %d %le %le %le \n",
+                all_data[i].n_point_t, all_data[i].first_child_t, all_data[i].parent_t, all_data[i].g_number_t,
+                all_data[i].point_id_t, all_data[i].p1_t, all_data[i].p2_t, 1, all_data[i].f1_t,
+                all_data[i].f2_t, all_data[i].f3_t);
+
+    }
+    fclose(q_tree_new_write);
+    printf("Сортировка %s завершена!", Q_TREE_FILENAME);
+}
 
 
 /* Определим набор задаваемых физических параметров:
@@ -552,7 +613,7 @@ main (int argc, char **argv) {
     char *tree_filename = argv[2];
 
 
-    /* Open the file for count lines */
+    /* Открываем файл для подсчета строк */
     char *line_buf = NULL;
     size_t line_buf_size = 0;
     int line_count = 0;
@@ -563,61 +624,48 @@ main (int argc, char **argv) {
         return 0;
     }
     while (line_size >= 0) {
-        /* Increment our line count */
         line_count++;
-        /* Get the next line */
         line_size = getline(&line_buf, &line_buf_size, q_tree_0);
     }
+
+
+
     line_count -= 1;
-    /* Free the allocated line buffer */
     line_buf = NULL;
-    /* Close the file now that we are done with it */
     fclose(q_tree_0);
 
-    struct point all_data[line_count];
-
-
-    // Open file again and read all data to array of structs
+    struct point all_data[line_count + 1];
+    struct point single_point;
     FILE *q_tree = fopen(tree_filename, "r");
 
     for (int i = 0; i < line_count; ++i) {
         fscanf(q_tree, "%d %s %s %d %s %lf %lf %s %le %le %le",
-               &n_point_t, first_child_t, parent_t, &g_number_t, point_id_t, &p1_t,
-               &p2_t, calculated_t, &f1_t, &f2_t, &f3_t);
+               &all_data[i].n_point_t, first_child_t, parent_t,
+               &all_data[i].g_number_t, point_id_t, &all_data[i].p1_t, &all_data[i].p2_t,
+               calculated_t, &all_data[i].f1_t, &all_data[i].f2_t, &all_data[i].f3_t);
+        strcpy(all_data[i].first_child_t, first_child_t);
+        strcpy(all_data[i].parent_t, parent_t);
+        strcpy(all_data[i].calculated_t, calculated_t);
+        strcpy(all_data[i].point_id_t, point_id_t);
 
-        all_data[i].n_point_t = n_point_t;
-        all_data[i].first_child_t = first_child_t;
-        all_data[i].parent_t = parent_t;
-        all_data[i].g_number_t = g_number_t;
-        all_data[i].point_id_t = point_id_t;
-        all_data[i].p1_t = p1_t;
-        all_data[i].p2_t = p2_t;
-        all_data[i].calculated_t = calculated_t;
-        all_data[i].f1_t = f1_t;
-        all_data[i].f2_t = f2_t;
-        all_data[i].f3_t = f3_t;
     }
     fclose(q_tree);
 
-    // Clean files file before writing information
-    fclose(fopen(calc_filename, "w"));
-    FILE *draw_file = fopen(draw_filename, "w");
-//    fprintf(draw_file, "X Y Z\n");
-    fclose(draw_file);
-
+    // Очищаем данные файлов перед запуском
+    fclose(fopen(CALC_FILENAME, "w"));
+    fclose(fopen(DRAW_FILENAME, "w"));
+    fclose(fopen(Q_TREE_FILENAME, "w"));
 
     struct draw_point draw_points[line_count];
-    // Set threads
 
+    // Set threads
     int thread_count = 12;
     omp_set_num_threads(thread_count);
-#pragma omp parallel for
+#pragma omp parallel for shared(all_data)
     for (int i = 0; i < line_count; ++i) {
         if (calculated_t[0] == '0') {
-            ode_calc(all_data[i].g_number_t, all_data[i].n_point_t, all_data[i].p1_t, all_data[i].p2_t, Ea1, Ea2, w1,
-                     w2, sIgma1, sIgma2, t01, t02, fi1, fi2, t_start, t_end);
-            int thread_num = omp_get_thread_num();
-//        printf("Num thread: %i\n", thread_num);
+            ode_calc(&all_data[i], Ea1, Ea2, w1, w2, sIgma1, sIgma2, t01, t02, fi1, fi2, t_start, t_end);
+
         }
     }
     printf("Расчет выполнен.\n");
@@ -625,10 +673,14 @@ main (int argc, char **argv) {
     printf("Затраченное время на расчет: %f\n", end_time);
     printf("Кол-во использованных потоков: %d\n",thread_count);
     printf("Сортируем полученные данные и строим графики...\n");
-    // Функция сортировки точек
+    // Функция сортировки точек для отрисовки графиков
     sort_dots_for_graphs(draw_points, line_count);
     // Функция отрисовки графиков
     draw_graphs(draw_points, line_count);
+
+    // Функция сортировки точек файла q_tree
+    sorting_and_move_temp_calc_to_q_tree(all_data, line_count);
+
 
     return 0;
 }
