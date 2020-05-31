@@ -85,7 +85,7 @@ int main (int argc, char **argv)
 
   FILE *calc_resalt_temp;
 
-    if((calc_resalt_temp = fopen("/home/gzimin/Documents/University/Fen_2020_Zim/calc_result","r")) == NULL)
+    if((calc_resalt_temp = fopen("calc_result","r")) == NULL)
 
         {
             printf("Error opening file calc_resalt_temp.txt\n");
@@ -96,7 +96,7 @@ int main (int argc, char **argv)
       {
         n_point_plus = n_point_plus + 1;
         // printf("n_point_plus = %d\n", n_point_plus);
-
+        printf("loop: %d\n", n_point_plus);
         if(f1 > f1_min)
             {
                 n_point_plus_no_zero = n_point_plus_no_zero + 1;
@@ -112,7 +112,7 @@ int main (int argc, char **argv)
         FILE *q_tree;
 
         char *filename3 = argv[3];
-        if((q_tree = fopen("q_tree.txt","r")) == NULL)
+        if((q_tree = fopen(filename3,"r")) == NULL)
         {
         printf("Error opening file q_tree.txt\n");
         return 1;
@@ -134,20 +134,20 @@ int main (int argc, char **argv)
                 // printf ("n_point = n_point_t = %d %.10e %.10e %.10e\n", n_point, f1, f2, f3);
                 fprintf (q_tree_n, "%d %s %s %d %s %.6f %.6f %s %e %e %e \n", n_point, first_child_t, parent_t, g_number_t, point_id_t, p1_t, p2_t, "1", f1, f2, f3);
               }
-              else
-              {
-                //printf ("n_point = n_point_t = %d %.10e %.10e %.10e\n", n_point, f1, f2, f3);
-                fprintf (q_tree_n, "%d %s %s %d %s %.6f %.6f %s %e %e %e \n", n_point_t, first_child_t, parent_t, g_number_t, point_id_t, p1_t, p2_t, calculated_t, f1_t, f2_t, f3_t);
-              };
+//              else
+//              {
+//                //printf ("n_point = n_point_t = %d %.10e %.10e %.10e\n", n_point, f1, f2, f3);
+//                fprintf (q_tree_n, "%d %s %s %d %s %.6f %.6f %s %e %e %e \n", n_point_t, first_child_t, parent_t, g_number_t, point_id_t, p1_t, p2_t, calculated_t, f1_t, f2_t, f3_t);
+//              };
         };
         fclose(q_tree);
         fclose(q_tree_n);
-        remove("Fen_2020_Zim//q_tree.txt");
-        rename("Fen_2020_Zim//q_tree_n.txt", "Fen_2020_Zim//q_tree.txt");
+//        remove("Fen_2020_Zim//q_tree.txt");
+//        rename("Fen_2020_Zim//q_tree_n.txt", "Fen_2020_Zim//q_tree.txt");
       };     
 
     fclose(calc_resalt_temp);
-    remove("Fen_2020_Zim//calc_resalt_temp.txt");
+//    remove("Fen_2020_Zim//calc_resalt_temp.txt");
 
     // читаем и редактируем глобальные параметры в файле task_globe
 

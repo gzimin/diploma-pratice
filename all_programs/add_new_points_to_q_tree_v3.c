@@ -192,7 +192,7 @@ FILE *task_globe;
 
     FILE *q_tree_temp;
 
-        if((q_tree_temp = fopen("q_tree_temp.txt","w")) == NULL)
+        if((q_tree_temp = fopen("/home/gzimin/CLionProjects/diploma-pratice/all_programs/q_tree_temp.txt","w")) == NULL)
         {
         printf("Error creation file q_tree_temp.txt\n");
         return 1;
@@ -222,7 +222,7 @@ FILE *task_globe;
 
     FILE *q_tree_temp2;
 
-    if((q_tree_temp2 = fopen("q_tree_temp2.txt","w")) == NULL)
+    if((q_tree_temp2 = fopen("/home/gzimin/CLionProjects/diploma-pratice/all_programs/q_tree_temp2.txt","w")) == NULL)
                 {
                 printf("Error creation file q_tree_temp2.txt\n");
                 return 1;
@@ -233,7 +233,7 @@ FILE *task_globe;
 
     FILE *q_tree_temp3;
 
-    if((q_tree_temp3 = fopen("q_tree_temp3.txt","w")) == NULL)
+    if((q_tree_temp3 = fopen("/home/gzimin/CLionProjects/diploma-pratice/all_programs/q_tree_temp3.txt","w")) == NULL)
                 {
                 printf("Error creation file q_tree_temp3.txt\n");
                 return 1;

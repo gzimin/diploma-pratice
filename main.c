@@ -84,8 +84,6 @@ char *DRAW_FILENAME = "results/dots_for_draw";
 char *Q_TREE_FILENAME = "results/q_tree_new";
 
 
-
-
 /*Определяем зависимость компонент электрического поля от времени*/
 double
 ePole1_ot_t(double t, void *params) {
@@ -236,8 +234,9 @@ jac(double t, const double y[], double *dfdy,
     return GSL_SUCCESS;
 }
 
-int ode_calc(struct point* single_data, double ePA1, double ePA2, double cP1,
-        double cP2, double sI1, double sI2, double t0p1, double t0p2, double fip1, double fip2, double t_s, double t_e) {
+int ode_calc(struct point *single_data, double ePA1, double ePA2, double cP1,
+             double cP2, double sI1, double sI2, double t0p1, double t0p2, double fip1, double fip2, double t_s,
+             double t_e) {
 
     struct params_ calc_params;
     calc_params.Ea1 = ePA1;
@@ -281,29 +280,29 @@ int ode_calc(struct point* single_data, double ePA1, double ePA2, double cP1,
 
     FILE *draw_points_file = fopen(DRAW_FILENAME, "a");
     if (!draw_points_file) {
-        fprintf(stderr, "Error opening file '%s'\n", DRAW_FILENAME);
+        fprintf(stderr, "Error opening file for adding dots: '%s'\n", DRAW_FILENAME);
         return 0;
     }
 
     FILE *q_tree_new_file = fopen(Q_TREE_FILENAME, "a");
-    if(!q_tree_new_file) {
+    if (!q_tree_new_file) {
         fprintf(stderr, "Error opening file '%s'\n", Q_TREE_FILENAME);
         return 0;
     }
-    // Запись точек для отрисовки в файл
-    if (y[0] < 0) {
+// Запись точек для отрисовки в файл
+    if (y[0] < pow(10, -16)) {
         y[0] = pow(10, -16);
     }
     fprintf(draw_points_file, "%.10f %.10f %.15e %d\n",
             single_data->p1_t, single_data->p2_t, y[0], single_data->g_number_t);
     fclose(draw_points_file);
 
-    // Запись результатов в файл
+// Запись результатов в файл
     fprintf(calc_result_file, "%d %.10f %.10f  %.10e %.10e  %.10e\n",
             single_data->n_point_t, single_data->p1_t, single_data->p2_t, y[0], y[1], y[2]);
     fclose(calc_result_file);
 
-    // Обновляем главную структуру данных
+// Обновляем главную структуру данных
 
     single_data->f1_t = y[0];
     single_data->f2_t = y[1];
@@ -312,14 +311,14 @@ int ode_calc(struct point* single_data, double ePA1, double ePA2, double cP1,
 
     gsl_odeiv2_driver_free(d);
 }
+
 // Компаратор точек для отрисовки графиков
-int md_comparator(const void *v1, const void *v2)
-{
-    const struct draw_point *p1 = (struct draw_point *)v1;
-    const struct draw_point *p2 = (struct draw_point *)v2;
-    if(p1->g_number_t < p2->g_number_t)
+int md_comparator(const void *v1, const void *v2) {
+    const struct draw_point *p1 = (struct draw_point *) v1;
+    const struct draw_point *p2 = (struct draw_point *) v2;
+    if (p1->g_number_t < p2->g_number_t)
         return -1;
-    else if(p1->g_number_t > p2->g_number_t)
+    else if (p1->g_number_t > p2->g_number_t)
         return +1;
     else if (p1->p1_t < p2->p1_t)
         return -1;
@@ -332,22 +331,22 @@ int md_comparator(const void *v1, const void *v2)
     else
         return 0;
 }
+
 // Компаратор для сортировки точек из файла q_tree
-int md_comparator_all_data(const void *v1, const void *v2)
-{
-    const struct point *p1 = (struct point *)v1;
-    const struct point *p2 = (struct point *)v2;
-    if(p1->n_point_t < p2->n_point_t)
+int md_comparator_all_data(const void *v1, const void *v2) {
+    const struct point *p1 = (struct point *) v1;
+    const struct point *p2 = (struct point *) v2;
+    if (p1->n_point_t < p2->n_point_t)
         return -1;
     else
         return +1;
 }
 
-int sort_dots_for_graphs (struct draw_point* all_points, int len) {
+int sort_dots_for_graphs(struct draw_point *all_points, int len) {
 
     FILE *draw_points_file = fopen(DRAW_FILENAME, "r");
     if (!draw_points_file) {
-        fprintf(stderr, "Error opening file '%s'\n", DRAW_FILENAME);
+        fprintf(stderr, "Error opening file for sorting: '%s'\n", DRAW_FILENAME);
         return 0;
     }
 
@@ -365,10 +364,10 @@ int sort_dots_for_graphs (struct draw_point* all_points, int len) {
     }
     fclose(draw_points_file);
 
-    // Сортировка данных
+// Сортировка данных
     qsort(all_points, len, sizeof(struct draw_point), md_comparator);
 
-    // Создаем файл для сортированных точек
+// Создаем файл для сортированных точек
     FILE *draw_points_file_sorted = fopen("results/dots_for_draw_sorted", "w");
     fprintf(draw_points_file_sorted, "X Y Z\n");
 
@@ -380,40 +379,46 @@ int sort_dots_for_graphs (struct draw_point* all_points, int len) {
     fclose(draw_points_file_sorted);
 }
 
-int draw_graphs(struct draw_point* all_points, int len) {
+int draw_graphs(struct draw_point *all_points, int len) {
 
-    // Отрисовываем трехмерный график в файл 3d_result.png
-    char * commandsForGnuplot[] =
+// Отрисовываем трехмерный график в файл 3d_result.png
+    char *commandsForGnuplot[] =
             {"set title \"График всех поколений\"",
              "set term png size 1024, 768",
              "set hidden3d",
-             // Если нужен 2d граффик
+// Если нужен 2d граффик
 //             "set view map",
              "set dgrid3d 100,100 qnorm 2",
+             "set key off",
 //             "set logscale z",
+             "set xlabel \'p1\'",
+             "set xrange [-0.05:0.05]",
+             "set yrange [-0.05:0.05]",
+             "set zrange [-18.0:1.0]",
+             "set ylabel \'p2\'",
+             "set zlabel \'f(p1, p2)\'",
              "set output \"results/3d_result.png\"",
              "set tics font \"Helvetica,8\"",
-             "set zrange [0:1]",
-             "splot 'results/dots_for_draw_sorted' using 1:2:3 with "
-             "points pointtype 7 pointsize 3 lc palette"};
+             "splot 'results/dots_for_draw_sorted' using 1:2:(log10($3)) with "
+             "points pointtype 7 pointsize 1.5 lc palette"};
 
     int num_commands = (sizeof(commandsForGnuplot) / sizeof((commandsForGnuplot)[0]));
 
-    // Открываем постоянное окно gnuplot
-    FILE* gnuplot_pipe = popen ("gnuplot -persistent", "w");
+// Открываем постоянное окно gnuplot
+    FILE *gnuplot_pipe = popen("gnuplot -persistent", "w");
 
-    // Выполняем все команды
-    for(int i = 0; i < num_commands; ++i){
+// Выполняем все команды
+    for (int i = 0; i < num_commands; ++i) {
         fprintf(gnuplot_pipe, "%s \n", commandsForGnuplot[i]);
     }
     fclose(gnuplot_pipe);
-    // Получаем максимальный уровень поколения
+// Получаем максимальный уровень поколения
     int max_level_generation = all_points[len - 1].g_number_t;
     char graph_gen_filename[50];
 
-    // Отрисовываем графики по поколениям
-    // Создаем файлы для каждого покления в папке 'results/gens'
-    for(int i = 1; i <= max_level_generation; ++i) {
+// Отрисовываем графики по поколениям
+// Создаем файлы для каждого покления в папке 'results/gens'
+    for (int i = 1; i <= max_level_generation; ++i) {
         int gen_number = i;
         char generation_draw_filename[30] = "results/gens/generation_";
         char gen_number_str[3];
@@ -422,21 +427,29 @@ int draw_graphs(struct draw_point* all_points, int len) {
 
         FILE *generation_draw_file = fopen(generation_draw_filename, "w");
         if (!generation_draw_file) {
-            fprintf(stderr, "Error opening file '%s'\n", DRAW_FILENAME);
-            return 0;
+// При добавлении новых точек возможно такое, что будет отрисовано только одну поколение, допустим 8.
+            printf("Error opening file '%s'\n", DRAW_FILENAME);
+//            return 0;
         }
-
-        for(int j = 0; j < len; ++j) {
-            if(all_points[j].g_number_t == gen_number) {
+// Если файл окажется пустым, то значит точек данного поколения нет, ничего рисовать не нужно.
+        int line_count = 0;
+        for (int j = 0; j < len; ++j) {
+            if (all_points[j].g_number_t == gen_number) {
+                line_count++;
                 fprintf(generation_draw_file, "%.10f %.10f %.20f %d\n",
                         all_points[j].p1_t, all_points[j].p2_t, all_points[j].f1_t, all_points[j].g_number_t);
             }
         }
         fclose(generation_draw_file);
 
-        FILE* gnuplot_pipe_generations = popen ("gnuplot -persistent", "w");
+        if (line_count == 0) {
+            remove(generation_draw_filename);
+            continue;
+        }
 
-        // Делаем массив пустым
+        FILE *gnuplot_pipe_generations = popen("gnuplot -persistent", "w");
+
+// Делаем массив пустым
         memset(graph_gen_filename, 0, sizeof graph_gen_filename);
 
         strcat(graph_gen_filename, "set output \"");
@@ -444,48 +457,40 @@ int draw_graphs(struct draw_point* all_points, int len) {
         strcat(graph_gen_filename, ".png\"");
 
 
-                // Если нужен 2d граффик
+// Если нужен 2d граффик
 //             "set view map",
-                //     "set dgrid3d 100,100 qnorm 2",
+//     "set dgrid3d 100,100 qnorm 2",
 
-        // Выполняем все команды для отрисовки
+// Выполняем все команды для отрисовки
         fprintf(gnuplot_pipe_generations, "%s %d %s\n", "set title \"График поколения - ", i, "\"");
-        fprintf(gnuplot_pipe_generations, "%s \n","set term png size 1024, 768");
+        fprintf(gnuplot_pipe_generations, "%s \n", "set term png size 1024, 768");
 //        fprintf(gnuplot_pipe_generations, "set zrange [-1:1]\n");
         fprintf(gnuplot_pipe_generations, "set hidden3d\n");
-        fprintf(gnuplot_pipe_generations, "set dgrid3d 100,100 qnorm 2\n");
+        fprintf(gnuplot_pipe_generations, "set dgrid3d 100, 100, 2\n");
         fprintf(gnuplot_pipe_generations, "set tics font \"Helvetica,8\"\n");
         fprintf(gnuplot_pipe_generations, "set view 72, 63, 1, 1\n");
+        fprintf(gnuplot_pipe_generations, "set xlabel \'p1\'\n");
+        fprintf(gnuplot_pipe_generations, "set ylabel \'p2\'\n");
+        fprintf(gnuplot_pipe_generations, "set key off\n");
+        fprintf(gnuplot_pipe_generations, "set zlabel \'f(p1, p2)\' offset 0,8\n");
         fprintf(gnuplot_pipe_generations, "%s \n", graph_gen_filename);
         fprintf(gnuplot_pipe_generations, "%s%s%s", "splot \'", generation_draw_filename, "\' using 1:2:3 with "
-            "points pointtype 7 pointsize 3 lc palette");
+                                                                                          "points pointtype 7 pointsize 3 lc palette");
 
         fclose(gnuplot_pipe_generations);
     }
 }
 
 
-void sorting_and_move_temp_calc_to_q_tree(struct point all_data[], int line_count){
-    int n_point_t;
-    char first_child_t[17];
-    char parent_t[17];
-    int g_number_t;
-    char point_id_t[17];
-    double p1_t;
-    double p2_t;
-    char calculated_t[2];
-    double f1_t;
-    double f2_t;
-    double f3_t;
+void sorting_and_move_temp_calc_to_q_tree(struct point all_data[], int line_count) {
 
-
-    // Сортируем все данные
+// Сортируем все данные
     qsort(all_data, line_count, sizeof(struct point), md_comparator_all_data);
 
-    // Перезаписываем файл
+// Перезаписываем файл
     FILE *q_tree_new_write = fopen(Q_TREE_FILENAME, "w");
 
-    for(int i =0; i < line_count; ++i){
+    for (int i = 0; i < line_count; ++i) {
         fprintf(q_tree_new_write, "%d %s %s %d %s %lf %lf %d %le %le %le \n",
                 all_data[i].n_point_t, all_data[i].first_child_t, all_data[i].parent_t, all_data[i].g_number_t,
                 all_data[i].point_id_t, all_data[i].p1_t, all_data[i].p2_t, 1, all_data[i].f1_t,
@@ -543,7 +548,7 @@ void sorting_and_move_temp_calc_to_q_tree(struct point all_data[], int line_coun
 
 
 int
-main (int argc, char **argv) {
+main(int argc, char **argv) {
 
     double start_time = omp_get_wtime();
     double Ea1;        /*амплитуда 1-й компоненты электрического поля в графеновых единицах*/
@@ -592,28 +597,21 @@ main (int argc, char **argv) {
     fscanf(task_q, "%lf %s", &t_start, s);
     fscanf(task_q, "%lf %s", &t_end, s);
 
-    // закрываем файл с параметрами задания
+// закрываем файл с параметрами задания
     fclose(task_q);
 
-    // вычисляем циклические частоты, которые используются в формулах далее
+// вычисляем циклические частоты, которые используются в формулах далее
     w1 = 6.2831853 * nu1;
     w2 = 6.2831853 * nu2;
 
-    int n_point_t;
     char first_child_t[17];
     char parent_t[17];
-    int g_number_t;
     char point_id_t[17];
-    double p1_t;
-    double p2_t;
     char calculated_t[2];
-    double f1_t;
-    double f2_t;
-    double f3_t;
     char *tree_filename = argv[2];
 
 
-    /* Открываем файл для подсчета строк */
+/* Открываем файл для подсчета строк */
     char *line_buf = NULL;
     size_t line_buf_size = 0;
     int line_count = 0;
@@ -629,13 +627,11 @@ main (int argc, char **argv) {
     }
 
 
-
     line_count -= 1;
     line_buf = NULL;
     fclose(q_tree_0);
 
     struct point all_data[line_count + 1];
-    struct point single_point;
     FILE *q_tree = fopen(tree_filename, "r");
 
     for (int i = 0; i < line_count; ++i) {
@@ -651,36 +647,37 @@ main (int argc, char **argv) {
     }
     fclose(q_tree);
 
-    // Очищаем данные файлов перед запуском
+// Очищаем данные файлов перед запуском
     fclose(fopen(CALC_FILENAME, "w"));
     fclose(fopen(DRAW_FILENAME, "w"));
     fclose(fopen(Q_TREE_FILENAME, "w"));
 
     struct draw_point draw_points[line_count];
-
-    // Set threads
+// Устанавливаем кол-во потоков
     int thread_count = 12;
     omp_set_num_threads(thread_count);
-#pragma omp parallel for shared(all_data)
-    for (int i = 0; i < line_count; ++i) {
-        if (calculated_t[0] == '0') {
-            ode_calc(&all_data[i], Ea1, Ea2, w1, w2, sIgma1, sIgma2, t01, t02, fi1, fi2, t_start, t_end);
+
+    int value_line_count = 0;
+#pragma omp parallel for shared(all_data, value_line_count)
+    for (int i = 0; i <= line_count; ++i) {
+        if (all_data[i].calculated_t[0] == '0') {
+            value_line_count++;
+            ode_calc(&all_data[i],Ea1, Ea2, w1, w2, sIgma1, sIgma2, t01, t02, fi1, fi2, t_start, t_end);
 
         }
     }
     printf("Расчет выполнен.\n");
     double end_time = omp_get_wtime() - start_time;
     printf("Затраченное время на расчет: %f\n", end_time);
-    printf("Кол-во использованных потоков: %d\n",thread_count);
+    printf("Кол-во использованных потоков: %d\n", thread_count);
     printf("Сортируем полученные данные и строим графики...\n");
-    // Функция сортировки точек для отрисовки графиков
-    sort_dots_for_graphs(draw_points, line_count);
-    // Функция отрисовки графиков
-    draw_graphs(draw_points, line_count);
+// Функция сортировки точек для отрисовки графиков
+    sort_dots_for_graphs(draw_points, value_line_count);
+// Функция отрисовки графиков
+    draw_graphs(draw_points, value_line_count);
 
-    // Функция сортировки точек файла q_tree
-    sorting_and_move_temp_calc_to_q_tree(all_data, line_count);
-
-
+// Функция сортировки точек файла q_tree
+    sorting_and_move_temp_calc_to_q_tree(all_data, value_line_count);
+    
     return 0;
 }
