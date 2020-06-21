@@ -1,32 +1,33 @@
-/****************************************************************************************
-*	Программа для вычисления функции распределения носителей заряда			*
-*	в графене по результатам действия импульсного электрического поля.		*
-*	Импульс поля представляет собой суперпозицию двух задаваемых			*
-*	независимо ортогональных компонент						*
-*	E1(t)=Ea1*Cos(w1*t+fi1)*exp(-(t-t01)^2/(2*(sIgma1/w1)^2)),			*
-*	E2(t)=Ea2*Cos(w2*t+fi2)*exp(-(t-t02)^2/(2*(sIgma2/w2)^2)).			*
-*	Каждая из компонент имеет форму гармонических колебаний,			*
-*	под обрезающей  Гауссовой огибающей.						*
-*	При этом для каждой компоненты можно задать собственную амплитуду,		*
-*	частоту, фазовый сдвиг, положение во времени максимума обрезающей		*
-*	экспоненты и её ширину.								*
-*											*
-*	Программа использует MPI для распараллеливания.					*
-*	За счет распараллеливания функция распределения вычисляется одновременно 	*
-*	в нескольких точках импульсного пространства.					*
-*	В файле задания определяется прямоугольная область в импульсном			*
-*	пространстве, для которой надо получить результат, и число точек по каждой	*
-*	компоненте импульса отдельно.							*
-*****************************************************************************************/
+/*
+ *	Программа для вычисления функции распределения носителей заряда
+ *	в графене по результатам действия импульсного электрического поля.
+ *	Импульс поля представляет собой суперпозицию двух задаваемых
+ *	независимо ортогональных компонент
+ *	E1(t)=Ea1*Cos(w1*t+fi1)*exp(-(t-t01)^2/(2*(sIgma1/w1)^2)),
+ *	E2(t)=Ea2*Cos(w2*t+fi2)*exp(-(t-t02)^2/(2*(sIgma2/w2)^2)).
+ *	Каждая из компонент имеет форму гармонических колебаний,
+ *	под обрезающей  Гауссовой огибающей.
+ *	При этом для каждой компоненты можно задать собственную амплитуду,
+ *	частоту, фазовый сдвиг, положение во времени максимума обрезающей
+ *	экспоненты и её ширину.
+ *
+ *	Программа использует MPI для распараллеливания.
+ *	За счет распараллеливания функция распределения вычисляется одновременно
+ *	в нескольких точках импульсного пространства.
+ *	В файле задания определяется прямоугольная область в импульсном
+ *	пространстве, для которой надо получить результат, и число точек по каждой
+ *	компоненте импульса отдельно.
+*/
 
-// Программа берет параметры задачи из файла task_q
-// Функция распределения и вспомогательные функции вычисляются для конечного момента времени
-// для списка точек в импульсном пространстве.
-// Список точек берется из файла q_tree
-// Берутся только точки, для которых установлен признак "не посчитано"
-// Результаты пишутся во временный файл calc_resalt_temp.txt
-// каждой точке соответствует уникальный номер, по которой она затем будет заноситься в task_q
-
+/*
+ * Программа берет параметры задачи из файла task_q
+ * Функция распределения и вспомогательные функции вычисляются для конечного момента времени
+ * для списка точек в импульсном пространстве.
+ * Список точек берется из файла q_tree
+ * Берутся только точки, для которых установлен признак "не посчитано"
+ * Результаты пишутся во временный файл calc_resalt_temp.txt
+ * каждой точке соответствует уникальный номер, по которой она затем будет заноситься в task_q
+*/
 
 #include <stdio.h>
 #include <math.h>
@@ -37,7 +38,7 @@
 #include <string.h>
 
 
-/* Введем структуру для передачи параметров */
+// Введем структуру для передачи параметров
 struct params_ {
     double Ea1;
     double Ea2;
@@ -53,7 +54,7 @@ struct params_ {
     double p2_loc;
 };
 
-/* Дополнительная структура параметров */
+// Дополнительная структура параметров
 struct point {
     int n_point_t;
     char first_child_t[17];
@@ -70,7 +71,7 @@ struct point {
 typedef struct point point;
 
 
-/* Стуктура для точек отрисовки */
+// Стуктура для точек отрисовки
 struct draw_point {
     double p1_t;
     double p2_t;
@@ -84,7 +85,7 @@ char *DRAW_FILENAME = "results/dots_for_draw";
 char *Q_TREE_FILENAME = "results/q_tree_new";
 
 
-/*Определяем зависимость компонент электрического поля от времени*/
+// Определяем зависимость компонент электрического поля от времени
 double
 ePole1_ot_t(double t, void *params) {
     struct params_ calc_params = *(struct params_ *) params;
@@ -109,7 +110,7 @@ ePole2_ot_t(double t, void *params) {
     return Ea2 * cos(w2 * t + fi2) * exp(-(t - t02) * (t - t02) * w2 * w2 / (2.0 * sIgma2 * sIgma2));
 }
 
-/* Определяем производную по времени от электрического поля */
+// Определяем производную по времени от электрического поля
 double
 ePole1_ot_t_proizvodnaya(double t, void *params) {
     struct params_ parametres = *(struct params_ *) params;
@@ -136,7 +137,7 @@ ePole2_ot_t_proizvodnaya(double t, void *params) {
            ((t - t02) * w2 * cos(w2 * t + fi2) / (sIgma2 * sIgma2) + sin(w2 * t + fi2));
 }
 
-/*Определяем вспомогательную функцию (энергия частицы в поле волны) */
+// Определяем вспомогательную функцию (энергия частицы в поле волны)
 double
 ePsilon(double a1_vekt_potencial, double a2_vekt_potencial, void *params) {
     struct params_ parametres = *(struct params_ *) params;
@@ -148,7 +149,7 @@ ePsilon(double a1_vekt_potencial, double a2_vekt_potencial, void *params) {
             2 * p2_loc * a2_vekt_potencial + a2_vekt_potencial * a2_vekt_potencial);
 }
 
-/*Определяем вспомогательную функцию Лямбда */
+// Определяем вспомогательную функцию Лямбда
 double
 Lyambda(double t, double a1_vekt_potencial, double a2_vekt_potencial, void *params) {
     struct params_ parametres = *(struct params_ *) params;
@@ -303,7 +304,6 @@ int ode_calc(struct point *single_data, double ePA1, double ePA2, double cP1,
     fclose(calc_result_file);
 
 // Обновляем главную структуру данных
-
     single_data->f1_t = y[0];
     single_data->f2_t = y[1];
     single_data->f3_t = y[2];
@@ -316,6 +316,12 @@ int ode_calc(struct point *single_data, double ePA1, double ePA2, double cP1,
 int md_comparator(const void *v1, const void *v2) {
     const struct draw_point *p1 = (struct draw_point *) v1;
     const struct draw_point *p2 = (struct draw_point *) v2;
+//    if(p1->f1_t < p2->f1_t)
+//        return -1;
+//    else if (p1->f1_t > p2->f1_t)
+//        return +1;
+//    else
+//        return 0;
     if (p1->g_number_t < p2->g_number_t)
         return -1;
     else if (p1->g_number_t > p2->g_number_t)
@@ -342,6 +348,7 @@ int md_comparator_all_data(const void *v1, const void *v2) {
         return +1;
 }
 
+// Функция сортировки точек для дальнейшей их отрисовки
 int sort_dots_for_graphs(struct draw_point *all_points, int len) {
 
     FILE *draw_points_file = fopen(DRAW_FILENAME, "r");
@@ -383,23 +390,25 @@ int draw_graphs(struct draw_point *all_points, int len) {
 
 // Отрисовываем трехмерный график в файл 3d_result.png
     char *commandsForGnuplot[] =
-            {"set title \"График всех поколений\"",
-             "set term png size 1024, 768",
+//            {"set title \"График всех поколений\"",
+            {"set term png size 1024, 768",
              "set hidden3d",
 // Если нужен 2d граффик
 //             "set view map",
              "set dgrid3d 100,100 qnorm 2",
              "set key off",
-//             "set logscale z",
              "set xlabel \'p1\'",
+             "set palette defined ( 0 \"green\", 1 \"blue\", 2 \"red\", 3 \"orange\" )",
+             "set ylabel \'p2\'",
              "set xrange [-0.05:0.05]",
              "set yrange [-0.05:0.05]",
-             "set zrange [-18.0:1.0]",
-             "set ylabel \'p2\'",
+             "set yrange [-0.05:0.05]",
              "set zlabel \'f(p1, p2)\'",
              "set output \"results/3d_result.png\"",
              "set tics font \"Helvetica,8\"",
-             "splot 'results/dots_for_draw_sorted' using 1:2:(log10($3)) with "
+// Логарифмическая шкала
+//             "splot 'results/dots_for_draw_sorted' using 1:2:(log10($3)) with "
+             "splot 'results/dots_for_draw_sorted' using 1:2:3 with "
              "points pointtype 7 pointsize 1.5 lc palette"};
 
     int num_commands = (sizeof(commandsForGnuplot) / sizeof((commandsForGnuplot)[0]));
@@ -407,17 +416,18 @@ int draw_graphs(struct draw_point *all_points, int len) {
 // Открываем постоянное окно gnuplot
     FILE *gnuplot_pipe = popen("gnuplot -persistent", "w");
 
-// Выполняем все команды
+// Выполняем все команды gnuplot-а
     for (int i = 0; i < num_commands; ++i) {
         fprintf(gnuplot_pipe, "%s \n", commandsForGnuplot[i]);
     }
     fclose(gnuplot_pipe);
+
 // Получаем максимальный уровень поколения
     int max_level_generation = all_points[len - 1].g_number_t;
     char graph_gen_filename[50];
 
 // Отрисовываем графики по поколениям
-// Создаем файлы для каждого покления в папке 'results/gens'
+// Создаем файлы для каждого покления в папке 'results/gens/'
     for (int i = 1; i <= max_level_generation; ++i) {
         int gen_number = i;
         char generation_draw_filename[30] = "results/gens/generation_";
@@ -427,7 +437,7 @@ int draw_graphs(struct draw_point *all_points, int len) {
 
         FILE *generation_draw_file = fopen(generation_draw_filename, "w");
         if (!generation_draw_file) {
-// При добавлении новых точек возможно такое, что будет отрисовано только одну поколение, допустим 8.
+// При добавлении новых точек возможно такое, что будет отрисовано только одну поколение, поэтому пропускаем ошибку.
             printf("Error opening file '%s'\n", DRAW_FILENAME);
 //            return 0;
         }
@@ -451,37 +461,35 @@ int draw_graphs(struct draw_point *all_points, int len) {
 
 // Делаем массив пустым
         memset(graph_gen_filename, 0, sizeof graph_gen_filename);
-
         strcat(graph_gen_filename, "set output \"");
         strcat(graph_gen_filename, generation_draw_filename);
         strcat(graph_gen_filename, ".png\"");
 
 
-// Если нужен 2d граффик
-//             "set view map",
-//     "set dgrid3d 100,100 qnorm 2",
 
-// Выполняем все команды для отрисовки
-        fprintf(gnuplot_pipe_generations, "%s %d %s\n", "set title \"График поколения - ", i, "\"");
+
+// Выполняем все команды для отрисовки графиков по поколениям
         fprintf(gnuplot_pipe_generations, "%s \n", "set term png size 1024, 768");
-//        fprintf(gnuplot_pipe_generations, "set zrange [-1:1]\n");
         fprintf(gnuplot_pipe_generations, "set hidden3d\n");
-        fprintf(gnuplot_pipe_generations, "set dgrid3d 100, 100, 2\n");
+        fprintf(gnuplot_pipe_generations, "set palette defined ( 0 \"green\", 1 \"blue\", 2 \"red\", 3 \"orange\")\n");
+//        fprintf(gnuplot_pipe_generations, "set dgrid3d 100, 100, 2\n");
         fprintf(gnuplot_pipe_generations, "set tics font \"Helvetica,8\"\n");
         fprintf(gnuplot_pipe_generations, "set view 72, 63, 1, 1\n");
         fprintf(gnuplot_pipe_generations, "set xlabel \'p1\'\n");
         fprintf(gnuplot_pipe_generations, "set ylabel \'p2\'\n");
+        fprintf(gnuplot_pipe_generations, "set xrange [-0.05:0.05]\n");
+        fprintf(gnuplot_pipe_generations, "set yrange [-0.05:0.05]\n");
         fprintf(gnuplot_pipe_generations, "set key off\n");
         fprintf(gnuplot_pipe_generations, "set zlabel \'f(p1, p2)\' offset 0,8\n");
         fprintf(gnuplot_pipe_generations, "%s \n", graph_gen_filename);
         fprintf(gnuplot_pipe_generations, "%s%s%s", "splot \'", generation_draw_filename, "\' using 1:2:3 with "
-                                                                                          "points pointtype 7 pointsize 3 lc palette");
+                                                                                          "points pointtype 7 pointsize 3 lc rgb 'green'");
 
         fclose(gnuplot_pipe_generations);
     }
 }
 
-
+// Функция переноса и сортировки данных.
 void sorting_and_move_temp_calc_to_q_tree(struct point all_data[], int line_count) {
 
 // Сортируем все данные
@@ -544,8 +552,8 @@ void sorting_and_move_temp_calc_to_q_tree(struct point all_data[], int line_coun
 *  Интегрирование для каждой точки выполняется отдельным процессом.
 *
 *
-*  Результаты рассчетов вписываются в соответствующую строку файла.                              */
-
+*  Результаты рассчетов вписываются в соответствующую строку файла.
+*/
 
 int
 main(int argc, char **argv) {
@@ -634,6 +642,7 @@ main(int argc, char **argv) {
     struct point all_data[line_count + 1];
     FILE *q_tree = fopen(tree_filename, "r");
 
+    // Считываем данные из файла q_tree
     for (int i = 0; i < line_count; ++i) {
         fscanf(q_tree, "%d %s %s %d %s %lf %lf %s %le %le %le",
                &all_data[i].n_point_t, first_child_t, parent_t,
@@ -647,17 +656,19 @@ main(int argc, char **argv) {
     }
     fclose(q_tree);
 
+
 // Очищаем данные файлов перед запуском
     fclose(fopen(CALC_FILENAME, "w"));
     fclose(fopen(DRAW_FILENAME, "w"));
     fclose(fopen(Q_TREE_FILENAME, "w"));
+    fclose(fopen("results/q_tree_new", "w"));
 
     struct draw_point draw_points[line_count];
+    int value_line_count = 0;
+
 // Устанавливаем кол-во потоков
     int thread_count = 12;
     omp_set_num_threads(thread_count);
-
-    int value_line_count = 0;
 #pragma omp parallel for shared(all_data, value_line_count)
     for (int i = 0; i <= line_count; ++i) {
         if (all_data[i].calculated_t[0] == '0') {
@@ -678,6 +689,5 @@ main(int argc, char **argv) {
 
 // Функция сортировки точек файла q_tree
     sorting_and_move_temp_calc_to_q_tree(all_data, value_line_count);
-    
     return 0;
 }

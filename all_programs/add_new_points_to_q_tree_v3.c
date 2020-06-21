@@ -95,17 +95,17 @@ FILE *task_globe;
 
     fscanf (task_globe, "%d %d %lf %d %d", &int_temp_2, &int_temp_2, &double_term_2, &g_number_in, &n_point_last);
 
-    if(n_point_last == 0)
-        {
-        printf("На предыдущей итерации точек не добавлялось!\n");
-        return 0;
-        }
-
-    if(size_0 / Pow_int(2,g_number_in + 2) < size_3)
-        {
-        printf("На предыдущей итерации был достигнут установленный предел шага сетки!\n");
-        return 0;
-        }
+//    if(n_point_last == 0)
+//        {
+//        printf("На предыдущей итерации точек не добавлялось!\n");
+//        return 0;
+//        }
+//
+//    if(size_0 / Pow_int(2,g_number_in + 2) < size_3)
+//        {
+//        printf("На предыдущей итерации был достигнут установленный предел шага сетки!\n");
+//        return 0;
+//        }
 
      fclose(task_globe);
 

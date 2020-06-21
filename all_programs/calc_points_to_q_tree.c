@@ -85,7 +85,7 @@ int main (int argc, char **argv)
 
   FILE *calc_resalt_temp;
 
-    if((calc_resalt_temp = fopen("calc_result","r")) == NULL)
+    if((calc_resalt_temp = fopen("calc_resalt_temp.txt","r")) == NULL)
 
         {
             printf("Error opening file calc_resalt_temp.txt\n");
@@ -120,7 +120,7 @@ int main (int argc, char **argv)
 
         FILE *q_tree_n;
 
-        if((q_tree_n = fopen("q_tree_n.txt","a")) == NULL)
+        if((q_tree_n = fopen("q_tree_n.txt","w")) == NULL)
         {
         printf("Error creation file q_tree_n.txt\n");
         return 1;
@@ -134,11 +134,11 @@ int main (int argc, char **argv)
                 // printf ("n_point = n_point_t = %d %.10e %.10e %.10e\n", n_point, f1, f2, f3);
                 fprintf (q_tree_n, "%d %s %s %d %s %.6f %.6f %s %e %e %e \n", n_point, first_child_t, parent_t, g_number_t, point_id_t, p1_t, p2_t, "1", f1, f2, f3);
               }
-//              else
-//              {
-//                //printf ("n_point = n_point_t = %d %.10e %.10e %.10e\n", n_point, f1, f2, f3);
-//                fprintf (q_tree_n, "%d %s %s %d %s %.6f %.6f %s %e %e %e \n", n_point_t, first_child_t, parent_t, g_number_t, point_id_t, p1_t, p2_t, calculated_t, f1_t, f2_t, f3_t);
-//              };
+             else
+             {
+               //printf ("n_point = n_point_t = %d %.10e %.10e %.10e\n", n_point, f1, f2, f3);
+               fprintf (q_tree_n, "%d %s %s %d %s %.6f %.6f %s %e %e %e \n", n_point_t, first_child_t, parent_t, g_number_t, point_id_t, p1_t, p2_t, calculated_t, f1_t, f2_t, f3_t);
+             };
         };
         fclose(q_tree);
         fclose(q_tree_n);
